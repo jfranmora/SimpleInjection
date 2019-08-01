@@ -2,7 +2,7 @@ using System;
 
 namespace SimpleInjection.Services
 {
-	public interface ILogService
+	public interface ILogService : IService
 	{
 		void Log(object msg);
 		void Log(object msg, object context);

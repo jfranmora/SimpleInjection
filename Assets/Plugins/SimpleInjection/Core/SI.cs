@@ -22,7 +22,7 @@ namespace SimpleInjection
 		{
 			// Bind main services
 			logService = new UnityLogService();
-			serviceLocator = new ServiceLocator(logService);
+			serviceLocator = new Locator(logService);
 			injector = new Injector(logService);
 
 			if (VERBOSE) logService.Log("Initializing Simple Injection...", typeof(SI));
@@ -50,7 +50,7 @@ namespace SimpleInjection
 					{
 						var attribute = (BindOnLoadAttribute)attributes[0];
 						var instance = Activator.CreateInstance(type);
-						serviceLocator.Bind(attribute.type, instance, "");
+						serviceLocator.Register(attribute.type, instance, "");
 					}
 				}
 			}
@@ -62,12 +62,7 @@ namespace SimpleInjection
 
 		public static void Bind<T>(T instance, string id = "")
 		{
-			serviceLocator.Bind(typeof(T), instance, id);
-		}
-
-		public static void Unbind<T>(string id = "")
-		{
-			serviceLocator.Unbind(typeof(T), id);
+			serviceLocator.Register(typeof(T), instance, id);
 		}
 
 		public static T Resolve<T>(string id = "")

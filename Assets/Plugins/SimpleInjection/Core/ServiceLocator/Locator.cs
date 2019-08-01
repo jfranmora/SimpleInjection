@@ -4,19 +4,19 @@ using SimpleInjection.Services;
 
 namespace SimpleInjection
 {
-	public class ServiceLocator : IServiceLocator
+	public class Locator : IServiceLocator
 	{
 		public static readonly bool VERBOSE = false;
 
 		private List<BindingContainer> data = new List<BindingContainer>();
 		private ILogService logService;
 
-		public ServiceLocator(ILogService logService)
+		public Locator(ILogService logService)
 		{
 			this.logService = logService;
 		}
 
-		public void Bind(Type type, object instance, string id)
+		public void Register(Type type, object instance, string id)
 		{
 			if (instance == null)
 			{
@@ -41,17 +41,6 @@ namespace SimpleInjection
 			container.bindings[key] = instance;
 
 			if (VERBOSE) logService.Log($"Bind<{type}>({instance})", this);
-		}
-
-		public void Unbind(Type type, string id)
-		{
-			string key = type.FullName;
-
-			var container = data.Find(x => x.id.Equals(id));
-			if (container != null)
-			{
-				container.bindings.Remove(key);
-			}
 		}
 
 		public object Resolve(Type type, string id)
