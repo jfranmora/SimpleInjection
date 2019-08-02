@@ -8,6 +8,8 @@ namespace SimpleInjection
 	{
 		public static bool VERBOSE => SI.VERBOSE;
 
+		public event System.Action<Type, object, string> OnRegister;
+
 		// data[type] = container;
 		private Dictionary<Type, BindingContainer> data = new Dictionary<Type, BindingContainer>();
 		private ILogService logService;
@@ -40,16 +42,16 @@ namespace SimpleInjection
 			}
 			container.bindings[id] = instance;
 
+			OnRegister?.Invoke(type, instance, id);
+
 			if (VERBOSE) logService.Log($"Bind<{type}>[{id}]({instance})", this);
 		}
 
 		public object Resolve(Type type, string id)
 		{
-			string key = type.FullName;
-
 			if (!data.ContainsKey(type)) return default;
 
-			return data[type].bindings.ContainsKey(id) ? data[type].bindings[key] : default;
+			return data[type].bindings.ContainsKey(id) ? data[type].bindings[id] : default;
 		}
 
 		public class BindingContainer
