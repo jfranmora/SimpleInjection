@@ -45,10 +45,10 @@ namespace SimpleInjection
 			{
 				foreach (Type type in assembly.GetTypes())
 				{
-					attributes = type.GetCustomAttributes(typeof(BindOnLoadAttribute), true);
+					attributes = type.GetCustomAttributes(typeof(DefaultBindingAttribute), true);
 					if (attributes.Length > 0)
 					{
-						var attribute = (BindOnLoadAttribute)attributes[0];
+						var attribute = (DefaultBindingAttribute)attributes[0];
 						var instance = Activator.CreateInstance(type);
 						serviceLocator.Register(attribute.type, instance, "");
 					}
@@ -63,6 +63,12 @@ namespace SimpleInjection
 		public static void Bind<T>(T instance, string id = "")
 		{
 			serviceLocator.Register(typeof(T), instance, id);
+		}
+
+		// TODO: Bind factories
+		public static void Bind<T>(T instance, Func<T> factory, string id = "")
+		{
+			throw new NotImplementedException();
 		}
 
 		public static T Resolve<T>(string id = "")

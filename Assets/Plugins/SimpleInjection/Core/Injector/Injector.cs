@@ -9,7 +9,7 @@ namespace SimpleInjection
 	// TODO: Remove unity specific
 	public class Injector : IInjector
 	{
-		public static readonly bool VERBOSE = false;
+		public static bool VERBOSE => SI.VERBOSE;
 
 		private ILogService logService;
 

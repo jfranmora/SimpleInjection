@@ -6,9 +6,10 @@ namespace SimpleInjection
 {
 	public class Locator : IServiceLocator
 	{
-		public static readonly bool VERBOSE = false;
+		public static bool VERBOSE => SI.VERBOSE;
 
-		private List<BindingContainer> data = new List<BindingContainer>();
+		// data[type] = container;
+		private Dictionary<Type, BindingContainer> data = new Dictionary<Type, BindingContainer>();
 		private ILogService logService;
 
 		public Locator(ILogService logService)
@@ -25,61 +26,39 @@ namespace SimpleInjection
 			}
 
 			// Find db
-			var container = data.Find(x => x.id.Equals(id));
+			var container = data.ContainsKey(type) ? data[type] : null;
 			if (container == null)
 			{
-				container = new BindingContainer(id);
-				data.Add(container);
+				container = new BindingContainer();
+				data.Add(type, container);
 			}
 
 			// Register service
-			string key = type.FullName;
-			if (!container.bindings.ContainsKey(key))
+			if (!container.bindings.ContainsKey(id))
 			{
-				container.bindings.Add(key, null);
+				container.bindings.Add(id, null);
 			}
-			container.bindings[key] = instance;
+			container.bindings[id] = instance;
 
-			if (VERBOSE) logService.Log($"Bind<{type}>({instance})", this);
+			if (VERBOSE) logService.Log($"Bind<{type}>[{id}]({instance})", this);
 		}
 
 		public object Resolve(Type type, string id)
 		{
 			string key = type.FullName;
 
-			var container = data.Find(x => x.id.Equals(id));
-			if (container == null)
-			{
-				return default;
-			}
-			else
-			{
-				return container.bindings.ContainsKey(key) ? container.bindings[key] : ResolveFallback(type, id);
-			}
-		}
+			if (!data.ContainsKey(type)) return default;
 
-		private object ResolveFallback(Type type, string id)
-		{
-			string key = type.FullName;
-
-			foreach (var container in data)
-			{
-				if (container.id.Equals(id)) continue;
-
-				if (container.bindings.ContainsKey(key)) return container.bindings[key];
-			}
-
-			return default;
+			return data[type].bindings.ContainsKey(id) ? data[type].bindings[key] : default;
 		}
 
 		public class BindingContainer
 		{
-			public string id;
+			// bindings[Id] = instance
 			public Dictionary<string, object> bindings;
 
-			public BindingContainer(string id)
+			public BindingContainer()
 			{
-				this.id = id;
 				this.bindings = new Dictionary<string, object>();
 			}
 		}
