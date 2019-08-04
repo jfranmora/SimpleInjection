@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Reflection;
 using SimpleInjection.Services;
@@ -11,6 +11,7 @@ namespace SimpleInjection
 		public static bool VERBOSE => SI.VERBOSE;
 
 		private ILogService logService;
+		private object valueCache;
 
 		public UnityInjector(ILogService logService)
 		{
@@ -19,10 +20,10 @@ namespace SimpleInjection
 
 		public void Inject(object target)
 		{
-			PerformGenericInjection(target, typeof(GetAttribute), PerformComponentInjection);
-			PerformGenericInjection(target, typeof(GetChildrenAttribute), PerformChildrenComponentInjection);
-			PerformGenericInjection(target, typeof(GetParentAttribute), PerformParentComponentInjection);
-			PerformGenericInjection(target, typeof(FindAttribute), PerformFindInjection);
+			PerformGenericInjection(target, typeof(GetAttribute), PerformComponentInjectionOrThrow);
+			PerformGenericInjection(target, typeof(GetChildrenAttribute), PerformChildrenComponentInjectionOrThrow);
+			PerformGenericInjection(target, typeof(GetParentAttribute), PerformParentComponentInjectionOrThrow);
+			PerformGenericInjection(target, typeof(FindAttribute), PerformFindInjectionOrThrow);
 		}
 
 		private void PerformGenericInjection(object target, Type attribute, Action<object, FieldInfo> action)
@@ -38,7 +39,7 @@ namespace SimpleInjection
 			}
 		}
 
-		private void PerformComponentInjection(object target, FieldInfo field)
+		private void PerformComponentInjectionOrThrow(object target, FieldInfo field)
 		{
 			if (field.FieldType.IsArray)
 			{
@@ -47,11 +48,14 @@ namespace SimpleInjection
 			}
 			else
 			{
-				field.SetValue(target, ((Component)target).GetComponent(field.FieldType));
+				valueCache = ((Component)target).GetComponent(field.FieldType);
+				if (valueCache == null) throw new DependencyNotResolvedException();
+
+				field.SetValue(target, valueCache);
 			}
 		}
 
-		private void PerformChildrenComponentInjection(object target, FieldInfo field)
+		private void PerformChildrenComponentInjectionOrThrow(object target, FieldInfo field)
 		{
 			if (field.FieldType.IsArray)
 			{
@@ -59,11 +63,14 @@ namespace SimpleInjection
 			}
 			else
 			{
-				field.SetValue(target, ((Component)target).GetComponentInChildren(field.FieldType));
+				valueCache = ((Component)target).GetComponentInChildren(field.FieldType);
+				if (valueCache == null) throw new DependencyNotResolvedException();
+
+				field.SetValue(target, valueCache);
 			}
 		}
 
-		private void PerformParentComponentInjection(object target, FieldInfo field)
+		private void PerformParentComponentInjectionOrThrow(object target, FieldInfo field)
 		{
 			if (field.FieldType.IsArray)
 			{
@@ -71,11 +78,14 @@ namespace SimpleInjection
 			}
 			else
 			{
-				field.SetValue(target, ((Component)target).GetComponentInParent(field.FieldType));
+				valueCache = ((Component)target).GetComponentInParent(field.FieldType);
+				if (valueCache == null) throw new DependencyNotResolvedException();
+
+				field.SetValue(target, valueCache);
 			}
 		}
 
-		private void PerformFindInjection(object target, FieldInfo field)
+		private void PerformFindInjectionOrThrow(object target, FieldInfo field)
 		{
 			if (field.FieldType.IsArray)
 			{
@@ -83,7 +93,10 @@ namespace SimpleInjection
 			}
 			else
 			{
-				field.SetValue(target, UnityEngine.Object.FindObjectOfType(field.FieldType));
+				valueCache = UnityEngine.Object.FindObjectOfType(field.FieldType);
+				if (valueCache == null) throw new DependencyNotResolvedException();
+
+				field.SetValue(target, valueCache);
 			}
 		}
 	}

@@ -10,6 +10,7 @@ namespace SimpleInjection
 		public static bool VERBOSE => SI.VERBOSE;
 
 		private ILogService logService;
+		private object valueCache;
 
 		public Injector (ILogService logService)
 		{
@@ -20,7 +21,7 @@ namespace SimpleInjection
 
 		public void Inject(object target)
 		{
-			PerformGenericInjection(target, typeof(InjectAttribute), PerformInjection);
+			PerformGenericInjection(target, typeof(InjectAttribute), PerformInjectionOrThrow);
 		}
 
 		#endregion
@@ -40,12 +41,12 @@ namespace SimpleInjection
 			}
 		}
 
-		private void PerformInjection(object target, FieldInfo field)
+		private void PerformInjectionOrThrow(object target, FieldInfo field)
 		{
-			field.SetValue(
-				target, 
-				SI.Resolve(field.FieldType, field.GetCustomAttribute<InjectAttribute>().id)
-			);
+			valueCache = SI.Resolve(field.FieldType, field.GetCustomAttribute<InjectAttribute>().id);
+			if (valueCache == null) throw new DependencyNotResolvedException();
+
+			field.SetValue(target, valueCache);
 		}
 
 		#endregion
