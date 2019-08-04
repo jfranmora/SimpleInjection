@@ -5,7 +5,8 @@ namespace SimpleInjection
 	[AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
 	public class InjectAttribute : Attribute
 	{
-		public string id;
+		public string id { get; set; }
+		public bool optional { get; set; }
 
 		public InjectAttribute() : this("")
 		{

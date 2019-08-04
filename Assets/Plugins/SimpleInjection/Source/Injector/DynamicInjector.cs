@@ -6,7 +6,7 @@ using SimpleInjection.Services;
 
 namespace SimpleInjection
 {
-	public class AutoInjector : IInjector
+	public class DynamicInjector : IInjector
 	{
 		public static bool VERBOSE => SI.VERBOSE;
 
@@ -15,7 +15,7 @@ namespace SimpleInjection
 
 		private Dictionary<Type, Dictionary<string, Container>> bindingData;
 
-		public AutoInjector(ILogService logService, Locator locator)
+		public DynamicInjector(ILogService logService, Locator locator)
 		{
 			bindingData = new Dictionary<Type, Dictionary<string, Container>>();
 
@@ -29,7 +29,7 @@ namespace SimpleInjection
 
 		public void Inject(object target)
 		{
-			PerformGenericInjection(target, typeof(InjectAttribute), PerformInjection);
+			PerformGenericInjection<DynamicInjectAttribute>(target, PerformInjection);
 		}
 
 		#endregion
@@ -61,22 +61,22 @@ namespace SimpleInjection
 
 		#region Helpers
 
-		private void PerformGenericInjection(object target, Type attribute, Action<object, FieldInfo> action)
+		private void PerformGenericInjection<TAttribute>(object target, Action<object, FieldInfo, TAttribute> action) where TAttribute : Attribute
 		{
-			var fields = target.GetType()
-				.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-				.Where(prop => Attribute.IsDefined(prop, attribute));
-
-			foreach (var field in fields)
+			TAttribute attr;
+			foreach (var field in target.GetType().GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
 			{
-				if (VERBOSE) logService.Log($"Injecting in {target} ==> {field.Name}", this);
-				action(target, field);
+				attr = field.GetCustomAttribute<TAttribute>();
+				if (attr != null)
+				{
+					if (VERBOSE) logService.Log($"Injecting in {target} ==> {field.Name}", this);
+					action(target, field, attr);
+				}
 			}
 		}
 
-		private void PerformInjection(object target, FieldInfo field)
+		private void PerformInjection(object target, FieldInfo field, DynamicInjectAttribute attr)
 		{
-			var attr = field.GetCustomAttribute<InjectAttribute>();
 			var type = field.FieldType;
 			var id = attr.id;
 
