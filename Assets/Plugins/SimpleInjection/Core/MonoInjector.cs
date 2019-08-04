@@ -3,7 +3,7 @@ using UnityEngine;
 namespace SimpleInjection
 {
 	[DefaultExecutionOrder(-31000)]
-	public class AutoInjector : MonoBehaviour
+	public class MonoInjector : MonoBehaviour
 	{
 		private void Awake()
 		{

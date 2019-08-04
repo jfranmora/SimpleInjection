@@ -15,31 +15,47 @@ namespace SimpleInjection
 		// Initialize SimpleInjection
 		static SI()
 		{
-			InitializeSI();
+			Initialize();
 		}
 
-		static void InitializeSI()
+		static void Initialize()
 		{
-			// Bind main services
 			logService = new UnityLogService();
-			serviceLocator = new Locator(logService);
-			injector = new Injector(logService);
 
 			if (VERBOSE) logService.Log("Initializing Simple Injection...", typeof(SI));
 
-			PerformBindOnLoad();
+			PerformBindMainServices();
+			PerformDefaultBindings();
 
 			if (VERBOSE) logService.Log("Simple Injection Initialized!", typeof(SI));
 		}
 
 		private static IServiceLocator serviceLocator;
-		private static IInjector injector;
+		private static List<IInjector> injectorList;
 		private static ILogService logService;
 
 		#region Helpers
 
-		private static void PerformBindOnLoad()
+		private static void PerformBindMainServices()
 		{
+			if (VERBOSE) logService.Log("Initializing main services...", typeof(SI));
+
+			// Bind locators
+			serviceLocator = new Locator(logService);
+
+			// Bind injectors...
+			injectorList = new List<IInjector>();
+			injectorList.Add(new Injector(logService));
+			injectorList.Add(new UnityInjector(logService));
+
+			// TODO: Test this!
+			// injectorList.Add(new AutoInjector(logService, (Locator)serviceLocator));
+		}
+
+		private static void PerformDefaultBindings()
+		{
+			if (VERBOSE) logService.Log("Perform default bindings...", typeof(SI));
+
 			object[] attributes;
 			foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
 			{
@@ -58,7 +74,7 @@ namespace SimpleInjection
 
 		#endregion
 
-		#region Service Locator
+		#region Bind
 
 		public static void Bind<T>(T instance, string id = "")
 		{
@@ -87,7 +103,10 @@ namespace SimpleInjection
 
 		public static void Inject(object target)
 		{
-			injector.Inject(target);
+			foreach (var injector in injectorList)
+			{
+				injector.Inject(target);
+			}
 		}
 
 		#endregion
