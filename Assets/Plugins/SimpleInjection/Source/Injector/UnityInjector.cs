@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Reflection;
 using SimpleInjection.Services;
 using UnityEngine;
@@ -49,7 +48,7 @@ namespace SimpleInjection
 			else
 			{
 				valueCache = ((Component)target).GetComponent(field.FieldType);
-				if (valueCache.Equals(null) && !attr.optional) throw new DependencyNotResolvedException($"Dependency not resolved ==> {field.FieldType}");
+				if ((valueCache == null || valueCache.Equals(null)) && !attr.optional) throw new DependencyNotResolvedException($"Dependency not resolved ==> {field.FieldType}");
 
 				field.SetValue(target, valueCache);
 			}
@@ -64,7 +63,7 @@ namespace SimpleInjection
 			else
 			{
 				valueCache = ((Component)target).GetComponentInChildren(field.FieldType);
-				if (valueCache.Equals(null) && !attr.optional) throw new DependencyNotResolvedException($"Dependency not resolved ==> {field.FieldType}");
+				if ((valueCache == null || valueCache.Equals(null)) && !attr.optional) throw new DependencyNotResolvedException($"Dependency not resolved ==> {field.FieldType}");
 
 				field.SetValue(target, valueCache);
 			}
@@ -79,7 +78,7 @@ namespace SimpleInjection
 			else
 			{
 				valueCache = ((Component)target).GetComponentInParent(field.FieldType);
-				if (valueCache.Equals(null) && !attr.optional) throw new DependencyNotResolvedException($"Dependency not resolved ==> {field.FieldType}");
+				if ((valueCache == null || valueCache.Equals(null)) && !attr.optional) throw new DependencyNotResolvedException($"Dependency not resolved ==> {field.FieldType}");
 
 				field.SetValue(target, valueCache);
 			}
@@ -94,7 +93,7 @@ namespace SimpleInjection
 			else
 			{
 				valueCache = UnityEngine.Object.FindObjectOfType(field.FieldType);
-				if (valueCache.Equals(null) && !attr.optional) throw new DependencyNotResolvedException($"Dependency not resolved ==> {field.FieldType}");
+				if ((valueCache == null || valueCache.Equals(null)) && !attr.optional) throw new DependencyNotResolvedException($"Dependency not resolved ==> {field.FieldType}");
 
 				field.SetValue(target, valueCache);
 			}
