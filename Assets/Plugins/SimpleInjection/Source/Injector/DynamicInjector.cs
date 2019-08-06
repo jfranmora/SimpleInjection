@@ -1,59 +1,50 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using SimpleInjection.Services;
 
 namespace SimpleInjection
 {
+	/// <summary>
+	/// - Inject (DynamicInjectAttribute)
+	/// </summary>
 	public class DynamicInjector : IInjector
 	{
 		public static bool VERBOSE => SI.VERBOSE;
 
+		private DiContainer container;
 		private ILogService logService;
-		private Locator locator;
 
-		private Dictionary<Type, Dictionary<string, Container>> bindingData;
+		private Dictionary<Type, Dictionary<string, DynamicBinding>> bindingDatabase;
 
-		public DynamicInjector(ILogService logService, Locator locator)
+		public DynamicInjector(DiContainer container, ILogService logService)
 		{
-			bindingData = new Dictionary<Type, Dictionary<string, Container>>();
+			bindingDatabase = new Dictionary<Type, Dictionary<string, DynamicBinding>>();
 
+			this.container = container;
 			this.logService = logService;
 
-			this.locator = locator;
-			locator.OnRegister += Locator_OnRegister;
+			container.OnBind += OnBind;
 		}
 
 		#region Public API
 
 		public void Inject(object target)
 		{
-			PerformGenericInjection<DynamicInjectAttribute>(target, PerformInjection);
+			this.PerformGenericInjection<DynamicInjectAttribute>(target, PerformInjection);
 		}
 
 		#endregion
 
 		#region Event Handling
 
-		private void Locator_OnRegister(Type type, object target, string id)
+		private void OnBind(Type type, object target, string id)
 		{
-			// TODO: Notify to observers
 			if (VERBOSE) logService.Log($"Notify [{type}-{id}] bindings!");
 
-			if (bindingData.ContainsKey(type))
+			if (bindingDatabase.ContainsKey(type) && bindingDatabase[type].ContainsKey(id))
 			{
-				if (bindingData[type].ContainsKey(id))
-				{
-					var container = bindingData[type][id];
-					for (var i = 0; i < container.instanceList.Count; i++)
-					{
-						if (container.instanceList[i] == null || container.fieldInfoList[i] == null) continue;
-
-						container.fieldInfoList[i].SetValue(container.instanceList[i], target);
-						if (VERBOSE) logService.Log($"Updated reference on {container.instanceList[i]} - {container.fieldInfoList[i]}");
-					}
-				}
+				bindingDatabase[type][id].UpdateFieldValues(target);
 			}
 		}
 
@@ -61,37 +52,23 @@ namespace SimpleInjection
 
 		#region Helpers
 
-		private void PerformGenericInjection<TAttribute>(object target, Action<object, FieldInfo, TAttribute> action) where TAttribute : Attribute
-		{
-			TAttribute attr;
-			foreach (var field in target.GetType().GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
-			{
-				attr = field.GetCustomAttribute<TAttribute>();
-				if (attr != null)
-				{
-					if (VERBOSE) logService.Log($"Injecting in {target} ==> {field.Name}", this);
-					action(target, field, attr);
-				}
-			}
-		}
-
 		private void PerformInjection(object target, FieldInfo field, DynamicInjectAttribute attr)
 		{
 			var type = field.FieldType;
 			var id = attr.id;
 
-			Dictionary<string, Container> typeContainer = bindingData.ContainsKey(type) ? bindingData[type] : new Dictionary<string, Container>();
-			if (!bindingData.ContainsKey(type))
-				bindingData.Add(type, typeContainer);
+			Dictionary<string, DynamicBinding> typeContainer = bindingDatabase.ContainsKey(type) ? bindingDatabase[type] : new Dictionary<string, DynamicBinding>();
+			if (!bindingDatabase.ContainsKey(type))
+				bindingDatabase.Add(type, typeContainer);
 
-			Container bindingContainer = typeContainer.ContainsKey(id) ? typeContainer[id] : new Container(type, id);
-			if (!bindingData[type].ContainsKey(id))
-				bindingData[type].Add(id, bindingContainer);
+			DynamicBinding binding = typeContainer.ContainsKey(id) ? typeContainer[id] : new DynamicBinding(type, id);
+			if (!bindingDatabase[type].ContainsKey(id))
+				bindingDatabase[type].Add(id, binding);
 
-			if (!bindingContainer.instanceList.Contains(target))
+			if (!binding.instanceList.Contains(target))
 			{
-				bindingContainer.instanceList.Add(target);
-				bindingContainer.fieldInfoList.Add(field);
+				binding.instanceList.Add(target);
+				binding.fieldInfoList.Add(field);
 
 				if (VERBOSE) logService.Log($"Binding {field} to {type}-{id}");
 			}
@@ -99,7 +76,7 @@ namespace SimpleInjection
 
 		#endregion
 
-		private struct Container
+		private struct DynamicBinding
 		{
 			public Type type;
 			public string id;
@@ -107,13 +84,23 @@ namespace SimpleInjection
 			public List<object> instanceList;
 			public List<FieldInfo> fieldInfoList;
 
-			public Container(Type type, string id)
+			public DynamicBinding(Type type, string id)
 			{
 				this.type = type;
 				this.id = id;
 
 				this.instanceList = new List<object>();
 				this.fieldInfoList = new List<FieldInfo>();
+			}
+
+			public void UpdateFieldValues(object value)
+			{
+				for (var i = 0; i < instanceList.Count; i++)
+				{
+					if (instanceList[i] == null || fieldInfoList[i] == null) continue;
+
+					fieldInfoList[i].SetValue(instanceList[i], value);
+				}
 			}
 		}
 	}

@@ -1,18 +1,22 @@
-using System;
 using System.Reflection;
 using SimpleInjection.Services;
 
 namespace SimpleInjection
 {
+	/// <summary>
+	/// - Inject (InjectAttribute, DynamicInjectAttribute)
+	/// </summary>
 	public class Injector : IInjector
 	{
 		public static bool VERBOSE => SI.VERBOSE;
 
+		private DiContainer container;
 		private ILogService logService;
 		private object valueCache;
 
-		public Injector (ILogService logService)
+		public Injector (DiContainer container, ILogService logService)
 		{
+			this.container = container;
 			this.logService = logService;
 		}
 
@@ -20,33 +24,25 @@ namespace SimpleInjection
 
 		public void Inject(object target)
 		{
-			PerformGenericInjection<InjectAttribute>(target, PerformInjectionOrThrow);
+			this.PerformGenericInjection<InjectAttribute>(target, PerformInjectionOrThrow);
+			this.PerformGenericInjection<DynamicInjectAttribute>(target, PerformDynamicInjection);
 		}
 
 		#endregion
 
 		#region Helpers
 
-		private void PerformGenericInjection<TAttribute>(object target, Action<object, FieldInfo, TAttribute> action) where TAttribute : Attribute
-		{
-			TAttribute attr;
-			foreach (var field in target.GetType().GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
-			{
-				attr = field.GetCustomAttribute<TAttribute>();
-				if (attr != null)
-				{
-					if (VERBOSE) logService.Log($"Injecting in {target} ==> {field.Name}", this);
-					action(target, field, attr);
-				}
-			}
-		}
-
 		private void PerformInjectionOrThrow(object target, FieldInfo field, InjectAttribute attr)
 		{
-			valueCache = SI.Resolve(field.FieldType, attr.id);
+			valueCache = container.Resolve(field.FieldType, attr.id);
 			if (valueCache == null && !attr.optional) throw new DependencyNotResolvedException($"Dependency not resolved ==> {field.FieldType}");
 
 			field.SetValue(target, valueCache);
+		}
+
+		private void PerformDynamicInjection(object target, FieldInfo field, DynamicInjectAttribute attr)
+		{
+			field.SetValue(target, container.Resolve(field.FieldType, attr.id));
 		}
 
 		#endregion

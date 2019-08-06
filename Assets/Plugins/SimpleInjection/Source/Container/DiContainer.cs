@@ -4,22 +4,31 @@ using SimpleInjection.Services;
 
 namespace SimpleInjection
 {
-	public class Locator : IServiceLocator
+	/// <summary>
+	/// - Bind
+	/// - Resolve
+	/// </summary>
+	public class DiContainer
 	{
 		public static bool VERBOSE => SI.VERBOSE;
 
-		public event System.Action<Type, object, string> OnRegister;
+		public event Action<Type, object, string> OnBind;
 
 		// data[type] = container;
 		private Dictionary<Type, BindingContainer> data = new Dictionary<Type, BindingContainer>();
 		private ILogService logService;
 
-		public Locator(ILogService logService)
+		public DiContainer(ILogService logService)
 		{
 			this.logService = logService;
 		}
 
-		public void Register(Type type, object instance, string id)
+		public void Bind<T>(T instance, string id = "")
+		{
+			Bind(typeof(T), instance, id);
+		}
+
+		public void Bind(Type type, object instance, string id = "")
 		{
 			if (instance == null)
 			{
@@ -42,7 +51,7 @@ namespace SimpleInjection
 			}
 			container.bindings[id] = instance;
 
-			OnRegister?.Invoke(type, instance, id);
+			OnBind?.Invoke(type, instance, id);
 
 			if (VERBOSE) logService.Log($"Bind<{type}>[{id}]({instance})", this);
 		}
@@ -56,12 +65,11 @@ namespace SimpleInjection
 
 		public class BindingContainer
 		{
-			// bindings[Id] = instance
 			public Dictionary<string, object> bindings;
 
 			public BindingContainer()
 			{
-				this.bindings = new Dictionary<string, object>();
+				bindings = new Dictionary<string, object>();
 			}
 		}
 	}

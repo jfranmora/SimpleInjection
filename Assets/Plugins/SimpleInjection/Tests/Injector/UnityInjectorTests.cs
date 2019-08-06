@@ -144,22 +144,22 @@ namespace SimpleInjection.Tests
 
 		private class ClassGetChildren : MonoBehaviour
 		{
-			[GetChildren] public Rigidbody someValue;
+			[Get(GetSource.Children)] public Rigidbody someValue;
 		}
 
 		private class ClassGetChildrenOptional : MonoBehaviour
 		{
-			[GetChildren(optional = true)] public Rigidbody someValue;
+			[Get(GetSource.Children, optional = true)] public Rigidbody someValue;
 		}
 
 		private class ClassGetParent : MonoBehaviour
 		{
-			[GetParent] public Rigidbody someValue;
+			[Get(GetSource.Parent)] public Rigidbody someValue;
 		}
 
 		private class ClassGetParentOptional : MonoBehaviour
 		{
-			[GetParent(optional = true)] public Rigidbody someValue;
+			[Get(GetSource.Parent, optional = true)] public Rigidbody someValue;
 		}
 
 		private class ClassFind : MonoBehaviour

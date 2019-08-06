@@ -1,43 +1,44 @@
-using System;
 using System.Reflection;
 using SimpleInjection.Services;
 using UnityEngine;
 
 namespace SimpleInjection
 {
+	/// <summary>
+	/// - Inject (GetAttribute, FindAttribute)
+	/// </summary>
 	public class UnityInjector : IInjector
 	{
 		public static bool VERBOSE => SI.VERBOSE;
 
+		private DiContainer container;
 		private ILogService logService;
+
 		private object valueCache;
 
-		public UnityInjector(ILogService logService)
+		public UnityInjector(DiContainer container, ILogService logService)
 		{
+			this.container = container;
 			this.logService = logService;
 		}
 
 		public void Inject(object target)
 		{
-			PerformGenericInjection<GetAttribute>(target, PerformComponentInjectionOrThrow);
-			PerformGenericInjection<GetChildrenAttribute>(target, PerformChildrenComponentInjectionOrThrow);
-			PerformGenericInjection<GetParentAttribute>(target, PerformParentComponentInjectionOrThrow);
-			PerformGenericInjection<FindAttribute>(target, PerformFindInjectionOrThrow);
+			this.PerformGenericInjection<GetAttribute>(target, PerformInjectionOrThrow);
+			this.PerformGenericInjection<FindAttribute>(target, PerformFindInjectionOrThrow);
 		}
 
-		private void PerformGenericInjection<TAttribute>(object target, Action<object, FieldInfo, TAttribute> action) where TAttribute : Attribute
+		private void PerformInjectionOrThrow(object target, FieldInfo field, GetAttribute attr)
 		{
-			TAttribute attr;
-			foreach (var field in target.GetType().GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+			switch (attr.source)
 			{
-				attr = field.GetCustomAttribute<TAttribute>();
-				if (attr != null)
-				{
-					if (VERBOSE) logService.Log($"Injecting in {target} ==> {field.Name}", this);
-					action(target, field, attr);
-				}
+				case GetSource.This: PerformComponentInjectionOrThrow(target, field, attr); break;
+				case GetSource.Children: PerformChildrenComponentInjectionOrThrow(target, field, attr); break;
+				case GetSource.Parent: PerformParentComponentInjectionOrThrow(target, field, attr); break;
 			}
 		}
+
+		#region Helpers
 
 		private void PerformComponentInjectionOrThrow(object target, FieldInfo field, GetAttribute attr)
 		{
@@ -54,7 +55,7 @@ namespace SimpleInjection
 			}
 		}
 
-		private void PerformChildrenComponentInjectionOrThrow(object target, FieldInfo field, GetChildrenAttribute attr)
+		private void PerformChildrenComponentInjectionOrThrow(object target, FieldInfo field, GetAttribute attr)
 		{
 			if (field.FieldType.IsArray)
 			{
@@ -69,7 +70,7 @@ namespace SimpleInjection
 			}
 		}
 
-		private void PerformParentComponentInjectionOrThrow(object target, FieldInfo field, GetParentAttribute attr)
+		private void PerformParentComponentInjectionOrThrow(object target, FieldInfo field, GetAttribute attr)
 		{
 			if (field.FieldType.IsArray)
 			{
@@ -98,5 +99,7 @@ namespace SimpleInjection
 				field.SetValue(target, valueCache);
 			}
 		}
+
+		#endregion
 	}
 }
